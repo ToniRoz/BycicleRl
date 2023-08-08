@@ -1,0 +1,11 @@
+LICENSE
+README.md
+setup.py
+bikewheelcalc/__init__.py
+bikewheelcalc/bicycle_wheel.py
+bikewheelcalc/mode_matrix.py
+bikewheelcalc/theory.py
+bikewheelcalc.egg-info/PKG-INFO
+bikewheelcalc.egg-info/SOURCES.txt
+bikewheelcalc.egg-info/dependency_links.txt
+bikewheelcalc.egg-info/top_level.txt
