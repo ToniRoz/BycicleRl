@@ -16,14 +16,21 @@ from models.model import NNModel
 
 
 class DQNAgent:
-    def __init__(self, env, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64],
+    def __init__(self, env, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64], shift=False,
                  Model_type="NN", use_per=True, memory_size=1000, max_episode_len=100, tree_max_depth=2,
                  tree_max_leafs=100, epsilon=0.1, epsilon_min=0.01,
                  epsilon_decay=0.005, logging=True, filename="dump.txt"):
+        self.SHIFT = False
         self.env = env
         self.state_size = self.env.observation_space.shape[0]
         self.action_size = self.env.action_space.n
         self.logging = logging
+
+        if shift:
+            self.SHIFT = True
+            self.n_action_types = 4
+            self.shift_values = [i * -60 for i in  # 60 since the 3d state will be flattend "-" because shift to left
+                                 range(18)]  # Update the shift_values based on the action to state relation
 
         self.EPISODES = 1
         self.max_episode_len = max_episode_len
@@ -51,7 +58,10 @@ class DQNAgent:
 
         # self.Model_name = os.path.join(self.Save_Path, "_e_greedy.h5")
 
-        if self.Model_type == "NN":
+        if self.Model_type == "NN" and self.SHIFT:
+            self.model = NNModel(input_shape=(self.state_size,), action_space=4, learning_rate=learning_rate,
+                                 layer_sizes=layer_sizes)
+        if self.Model_type == "NN" and not self.SHIFT:
             self.model = NNModel(input_shape=(self.state_size,), action_space=72, learning_rate=learning_rate,
                                  layer_sizes=layer_sizes)
         if self.Model_type == "Tree":
@@ -79,7 +89,9 @@ class DQNAgent:
             with open(self.filename, 'w') as f:
                 f.write(json.dumps(params, indent=4))
 
+    def shift_state(self, state, shift_value):
 
+        return np.roll(state, shift_value)  # Shift the state to the left by shift_value
 
     def remember(self, state, action, reward, next_state, done):
         experience = state, action, reward, next_state, done
@@ -89,7 +101,51 @@ class DQNAgent:
             self.memory.append(experience)
 
 
-    
+    def shift_act(self, state, decay_step):
+        # EPSILON GREEDY STRATEGY
+        explore_probability = self.epsilon_min + (self.epsilon - self.epsilon_min) * np.exp(
+            -self.epsilon_decay * decay_step)
+
+        if explore_probability > random.random():
+            random_action = random.randrange(self.action_size)
+            if self.logging:
+                with open(self.filename, 'a') as f:
+                    f.write(f" random action: {random_action}\n")
+            return random_action, explore_probability
+        else:
+            try:
+                # Prepare the batch of shifted states
+                shifted_states = [self.shift_state(state, shift) for shift in self.shift_values]
+                q_values = self.model.predict(np.array(shifted_states).reshape(len(shifted_states), -1), verbose=0)
+
+                # Flatten q_values
+                q_values = q_values.flatten()
+                if self.logging:
+                    with open(self.filename, 'a') as f:
+                        f.write(f" prediction: {np.max(q_values)}\n for action {np.argmax(q_values)}\n")
+
+                return np.argmax(q_values), explore_probability
+            except NotFittedError:
+                random_action = random.randrange(self.action_size)
+                if self.logging:
+                    with open(self.filename, 'a') as f:
+                        f.write(f" random action: {random_action}\n")
+                return random_action
+
+    def shift_evalact(self, state):
+
+        q_values = []
+        for shift in self.shift_values:
+            shifted_state = self.shift_state(state, shift)
+            q_values_action = self.model.predict(shifted_state.reshape(1, -1), verbose=0)[0]
+            for q_value in q_values_action:
+                q_values.append(q_value)
+
+        if self.logging:
+            with open(self.filename, 'a') as f:
+                f.write(f" eval_prediction: {np.max(q_values)}\n for action {np.argmax(q_values)}\n")
+
+        return np.argmax(q_values)
 
     def evalact(self, state):
 
@@ -132,6 +188,56 @@ class DQNAgent:
                         f.write(f" random action: {random_action}\n")
                 return random_action, explore_probability
 
+    def shift_replay(self):
+        # Sample a mini-batch from memory
+        minibatch, tree_idx = (self.MEMORY.sample(self.batch_size) if self.USE_PER
+                               else (random.sample(self.memory, min(len(self.memory), self.batch_size)), None))
+
+        # Initialize the arrays for storing the samples
+        state, next_state = np.zeros((self.batch_size, self.state_size)), np.zeros((self.batch_size, self.state_size))
+        action, reward, done = np.zeros(self.batch_size), np.zeros(self.batch_size), np.zeros(self.batch_size,
+                                                                                              dtype=bool)
+
+        # Store the samples in the arrays
+        for i in range(self.batch_size):
+            state[i], action[i], reward[i], next_state[i], done[i] = minibatch[i]
+
+        # Compute the action types and shift values, and adjust the states
+        action_type = action % self.n_action_types
+        for i in range(len(minibatch)):
+            shift_value = self.shift_values[int(action[i] // 4)]
+            state[i] = np.roll(state[i], shift_value)
+
+        try:  # check logic here if value estimation is right
+            q_values = self.model.predict(state)
+        except NotFittedError:
+            q_values = reward
+
+        # Copy the predicted Q-values as the target Q-values
+        target_q_values = np.array(q_values)
+
+        # Adjust the target Q-values
+        try:
+            for i in range(len(minibatch)):
+                if done[i]:
+                    target_q_values[i][int(action_type[i])] = reward[i]
+                else:
+                    shifted_next_states = [np.roll(next_state[i], shift_value).reshape(1, -1) for shift_value in
+                                           self.shift_values]
+                    q_values_next_shifted = self.model.predict(np.array(shifted_next_states))
+                    q_values_next_shifted = q_values_next_shifted.flatten()
+                    max_q_next = max(q_values_next_shifted)
+                    target_q_values[i][int(action_type[i])] = reward[i] + self.gamma * max_q_next
+        except NotFittedError:
+            pass
+
+        # Compute the absolute errors between the old and new Q-values
+        if self.USE_PER:
+            absolute_errors = np.abs(q_values - target_q_values).max(axis=1)
+            self.MEMORY.batch_update(tree_idx, absolute_errors)
+
+        batch_size = self.batch_size if self.Model_type == "NN" else None
+        self.model.fit(state, target_q_values, batch_size=batch_size, verbose=0)
 
     def replay(self):
 
@@ -265,7 +371,10 @@ class DQNAgent:
             runtime = 0
 
             while not done:
-                action = self.evalact(state)
+                if self.SHIFT:
+                    action = self.shift_evalact(state)
+                else:
+                    action = self.evalact(state)
                 spoke_index = action // 2
                 adjustment = -0.5 if action % 2 == 0 else 0.5
                 tension[spoke_index] += adjustment
@@ -328,49 +437,89 @@ class DQNAgent:
 
     def run(self, EPISODES):
         decay_step = 0
+        if self.SHIFT:
+            if self.Model_type == "Tree":
+                for e in range(EPISODES):
+                    state, reward = self.env.reset()
+                    state = np.reshape(state, [1, 1080])
+                    for time in range(self.max_episode_len):
+                        decay_step += 1
+                        action, explore_probability = self.shift_act(state, decay_step)
+                        next_state, reward, done, _ = self.env.step(action)
+                        if self.logging:
+                            with open(self.filename, 'a') as f:
+                                f.write(f" reward: {reward}\n")
+                        next_state = np.reshape(next_state, [1, 1080])
+                        self.remember(state, action, reward, next_state, done)
+                        state = next_state
+                        if done:
+                            break
+                    self.shift_replay(self.memory_size)
+            else:
+                for e in range(EPISODES):
+                    state, first = self.env.reset()
+                    state = np.reshape(state, [1, self.state_size])
+                    done = False
+                    i = 0
+                    while not done:
+                        decay_step += 1
+                        action, explore_probability = self.shift_act(state, decay_step)
+                        next_state, reward, done, _ = self.env.step(action)
+                        if self.logging:
+                            with open(self.filename, 'a') as f:
+                                f.write(f" reward: {reward}\n")
+                        next_state = np.reshape(next_state, [1, self.state_size])
 
-        if self.Model_type == "Tree":
-            for e in range(EPISODES):
-                state, reward = self.env.reset()
-                state = np.reshape(state, [1, 1080])
-                for time in range(self.max_episode_len):
-                    decay_step += 1
-                    action, explore_probability = self.act(state, decay_step)
-                    next_state, reward, done, _ = self.env.step(action)
-                    if self.logging:
-                        with open(self.filename, 'a') as f:
-                            f.write(f" reward: {reward}\n")
-                    next_state = np.reshape(next_state, [1, 1080])
-                    self.remember(state, action, reward, next_state, done)
-                    state = next_state
-                    if done:
-                        break
-
-                self.tree_replay()
+                        self.remember(state, action, reward, next_state, done)
+                        state = next_state
+                        i += 1
+                        if i >= self.max_episode_len:
+                            break
+                        if i % 10 == 0:
+                            self.shift_replay()
         else:
-            decay_step = 0
-            for e in range(EPISODES):
-                state, first = self.env.reset()
-                state = np.reshape(state, [1, self.state_size])
-                done = False
-                i = 0
-                tensorflow.keras.backend.clear_session()
-                while not done:
-                    decay_step += 1
-                    action, explore_probability = self.act(state, decay_step)
-                    next_state, reward, done, _ = self.env.step(action)
-                    if self.logging:
-                        with open(self.filename, 'a') as f:
-                            f.write(f" reward: {reward}\n")
-                    next_state = np.reshape(next_state, [1, self.state_size])
+            if self.Model_type == "Tree":
+                for e in range(EPISODES):
+                    state, reward = self.env.reset()
+                    state = np.reshape(state, [1, 1080])
+                    for time in range(self.max_episode_len):
+                        decay_step += 1
+                        action, explore_probability = self.act(state, decay_step)
+                        next_state, reward, done, _ = self.env.step(action)
+                        if self.logging:
+                            with open(self.filename, 'a') as f:
+                                f.write(f" reward: {reward}\n")
+                        next_state = np.reshape(next_state, [1, 1080])
+                        self.remember(state, action, reward, next_state, done)
+                        state = next_state
+                        if done:
+                            break
 
-                    self.remember(state, action, reward, next_state, done)
-                    state = next_state
-                    i += 1
-                    if i >= self.max_episode_len:
-                        break
-                    if i % 10 == 0:
-                        self.replay()
+                    self.tree_replay()
+            else:
+                decay_step = 0
+                for e in range(EPISODES):
+                    state, first = self.env.reset()
+                    state = np.reshape(state, [1, self.state_size])
+                    done = False
+                    i = 0
+                    tensorflow.keras.backend.clear_session()
+                    while not done:
+                        decay_step += 1
+                        action, explore_probability = self.act(state, decay_step)
+                        next_state, reward, done, _ = self.env.step(action)
+                        if self.logging:
+                            with open(self.filename, 'a') as f:
+                                f.write(f" reward: {reward}\n")
+                        next_state = np.reshape(next_state, [1, self.state_size])
+
+                        self.remember(state, action, reward, next_state, done)
+                        state = next_state
+                        i += 1
+                        if i >= self.max_episode_len:
+                            break
+                        if i % 10 == 0:
+                            self.replay()
     def save(self, name):
         self.model.save(name)
 
