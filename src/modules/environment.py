@@ -26,7 +26,7 @@ class WheelEnv(Env):
 
         self.filename = filename
 
-        self.max_tension = 2
+        self.max_tension = 3
 
         self.theta = np.linspace(-np.pi, np.pi, 360)
 
@@ -80,20 +80,56 @@ class WheelEnv(Env):
         plt.style.use('dark_background')
         self.norm = TwoSlopeNorm(vmin=-self.max_tension, vcenter=0, vmax=self.max_tension)
         self.rewards = []  # Initialize empty list for rewards
-        self.fig = plt.figure(figsize=(15, 5))  # change the size to accommodate the new subplot
-        self.ax1 = self.fig.add_subplot(131)  # first subplot for bar plot
-        self.ax2 = self.fig.add_subplot(132, projection='3d')  # second subplot for 3D plot
-        self.ax3 = self.fig.add_subplot(133)  # third subplot for reward plot
-        self.ax3.set_title("Reward per Episode")
-        self.ax3.set_xlabel("Episode")
+        self.reward_sums = []  # Initialize reward sum
+        self.fig = plt.figure(figsize=(15, 10))  # Adjust height to fit two rows of subplots
+
+        # First row: Original subplots
+        self.ax1 = self.fig.add_subplot(231)  # First subplot in a 2x3 grid
+        self.ax2 = self.fig.add_subplot(232, projection='3d')  # Second subplot in the first row
+        self.ax3 = self.fig.add_subplot(233)  # Third subplot in the first row
+
+        # Second row: New subplots
+        self.ax4 = self.fig.add_subplot(234)  # First subplot in the second row
+        self.ax5 = self.fig.add_subplot(235)  # Second subplot in the second row
+        self.ax6 = self.fig.add_subplot(236)  # Third subplot in the second row
+
+        # Example: Set titles for each subplot (optional)
+        self.ax4.set_title('Session')
+        self.ax4.set_xlabel("Episode")
+        self.ax4.set_ylabel("cum. Reward")
+        self.ax5.set_title('New Plot 2')
+        self.ax6.set_title('New Plot 3')
+
+        self.ax3.set_title("Reward per step")
+        self.ax3.set_xlabel("step")
         self.ax3.set_ylabel("Reward")
         self.spokes_lines = []
         if self.render:
             self.init_plot()
 
+    def update_text(self, epsilon, gamma, learning_rate, batch_size, explore_probability):
+        # Clear the subplot
+        self.ax6.clear()
+        self.ax6.axis('off')  # Turn off the axes
+
+        # Display each parameter as text
+        y_position = 0.9
+        self.ax6.text(0.1, y_position, f"epsilon: {epsilon}", fontsize=12, transform=self.ax5.transAxes)
+        y_position -= 0.1
+        self.ax6.text(0.1, y_position, f"gamma: {gamma}", fontsize=12, transform=self.ax5.transAxes)
+        y_position -= 0.1
+        self.ax6.text(0.1, y_position, f"learning rate: {learning_rate}", fontsize=12, transform=self.ax5.transAxes)
+        y_position -= 0.1
+        self.ax6.text(0.1, y_position, f"batch size: {batch_size}", fontsize=12, transform=self.ax5.transAxes)
+        y_position -= 0.1
+        self.ax6.text(0.1, y_position, f"random a. chance: {explore_probability}", fontsize=12, transform=self.ax5.transAxes)
+        y_position -= 0.1
+
+        self.ax6.set_title("Dynamic Parameters", fontsize=14)
+
     def init_plot(self):
         self.bars = self.ax1.bar(range(self.n_spokes), self.tensionchanges)
-        self.ax1.set_ylim([-self.max_tension, self.max_tension])
+        self.ax1.set_ylim([-self.max_tension - 2, self.max_tension + 2])
         self.ax2.set_xlabel('X')
         self.ax2.set_ylabel('Y')
         self.ax2.set_zlabel('Z')
@@ -127,10 +163,21 @@ class WheelEnv(Env):
     def update_reward_plot(self):
         self.ax3.clear()  # clear previous plot
         self.ax3.plot(self.rewards, label="Reward")  # plot the new reward data
+        self.ax4.set_title('Session')
+        self.ax4.set_xlabel("Episode")
+        self.ax4.set_ylabel("cum. Reward")
         self.ax3.legend()  # show the legend
         self.fig.canvas.draw()  # update the figure
         self.fig.canvas.flush_events()
         plt.pause(0.001)
+
+    def update_episode_plot(self):
+        self.ax4.clear()
+        self.ax4.plot(self.reward_sums, label="Session")
+        self.fig.canvas.draw()  # update the figure
+        self.fig.canvas.flush_events()
+        plt.pause(0.001)
+
 
     def draw_spokes(self):
         spokes_lines = []
@@ -210,8 +257,9 @@ class WheelEnv(Env):
     def step(self, action):
         spoke_index = action // 2
         adjustment = -0.5 if action % 2 == 0 else 0.5
-        self.previous_tensionchanges = self.tensionchanges
+        self.previous_tensionchanges = np.copy(self.tensionchanges)
         self.tensionchanges[spoke_index] += adjustment
+
         if self.logging:
             with open(self.filename, 'a') as f:
                 f.write(f" tensionchanges: {self.tensionchanges}\n")
@@ -228,6 +276,8 @@ class WheelEnv(Env):
     def reset(self):
         self.tensionchanges = np.random.rand(self.n_spokes) * 2 - 1
         self.previous_tensionchanges = self.tensionchanges
+        self.reward_sums.append(np.sum(self.rewards))
+        self.update_episode_plot()
         self.rewards = []
         if self.logging:
             with open(self.filename, 'a') as f:
@@ -261,11 +311,22 @@ class WheelEnv(Env):
 
         reward = - np.sum(np.linalg.norm(tot_def, axis=1))
 
+
         if reward >= self.best_reward:  # done if model finds naive best guess
             done = True
-        if self.max_tension <= max(abs(self.previous_tensionchanges)) < max(
-                abs(self.tensionchanges)):  # enforce max tension through reward
-            reward = reward - 1000
+        
+        #this code does not work since tensionchanges = previous tension
+        # above problem is now fixed
+        # what is better? to repeadetly punish as long as the spoketension is to high or to only punish once?
+        
+        #if (self.max_tension <= max(abs(spoketension))) and (max(abs(self.previous_tensionchanges)) < max(
+        #        abs(spoketension))):  
+        #    reward = reward - 5000
+        for spoke in spoketension:
+
+            if (self.max_tension <= abs(spoke)):
+                reward = reward - 5000
+            
 
         next_state = tot_def.flatten()
 

@@ -8,6 +8,7 @@ from keras import backend as K
 from collections import deque
 import os
 import json
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.exceptions import NotFittedError
 from .memory import Memory
 from models.model import NNModel
@@ -16,8 +17,8 @@ from models.model import NNModel
 
 class DQNAgent:
     def __init__(self, env, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64],
-                 Model_type="NN", use_per=True, memory_size=1000, max_episode_len=100,
-                epsilon=0.1, epsilon_min=0.01,
+                 Model_type="NN", use_per=True, memory_size=1000, max_episode_len=100, tree_max_depth=2,
+                 tree_max_leafs=100, epsilon=0.1, epsilon_min=0.01,
                  epsilon_decay=0.005, logging=True, filename="dump.txt"):
         self.env = env
         self.state_size = self.env.observation_space.shape[0]
@@ -53,6 +54,11 @@ class DQNAgent:
         if self.Model_type == "NN":
             self.model = NNModel(input_shape=(self.state_size,), action_space=72, learning_rate=learning_rate,
                                  layer_sizes=layer_sizes)
+        if self.Model_type == "Tree":
+            self.tree_max_depth = tree_max_depth
+            self.tree_max_leafs = tree_max_leafs
+            self.model = DecisionTreeRegressor(max_depth=self.tree_max_depth, max_leaf_nodes=self.tree_max_leafs)
+            print(f"Model = Regression Tree with param: depth = {self.tree_max_depth}, max_leaf_node = {self.tree_max_leafs}")  # need to tune hyperparam here
 
         params = locals()
         del params['self']  # Remove 'self' entry from the dictionary
@@ -104,8 +110,6 @@ class DQNAgent:
 
         explore_probability = self.epsilon_min + (self.epsilon - self.epsilon_min) * np.exp(
             -self.epsilon_decay * decay_step)
-        
-        self.env.update_text( self.epsilon, self.gamma, self.learning_rate, self.batch_size, explore_probability)
 
         if explore_probability > np.random.rand():
             random_action = random.randrange(self.action_size)
@@ -134,9 +138,6 @@ class DQNAgent:
         if self.USE_PER:
             # Sample minibatch from the PER memory
             tree_idx, minibatch = self.MEMORY.sample(self.batch_size)
-            print("here")
-            print(len(minibatch))
-            print(minibatch[30])
         else:
             # Randomly sample minibatch from the deque memory
             minibatch = random.sample(self.memory, min(len(self.memory),
@@ -148,7 +149,7 @@ class DQNAgent:
 
         # Store the samples in the arrays
 
-        for i in range(self.batch_size):# used to be min(self.batch_size,len(self.memory)) but it was causing an error with shorter episodes
+        for i in range(min(self.batch_size,len(self.memory))):
             state[i] = minibatch[i][0]
             action.append(minibatch[i][1])
             reward.append(minibatch[i][2])
@@ -169,8 +170,6 @@ class DQNAgent:
         for i in range(len(minibatch)):
             if i == 0:
                 print(len(minibatch))
-                print(len(done))
-                print(done)
             # correction on the Q value for the action used
             if done[i]:
                 target[i][action[i]] = reward[i]
@@ -196,6 +195,54 @@ class DQNAgent:
 
         if self.Model_type == "NN":
             self.model.fit(state, target, batch_size=self.batch_size, verbose=0)
+
+    def tree_replay(self):
+
+        minibatch = random.sample(self.memory, len(self.memory))  # Initialize the arrays for storing the samples
+
+        state = np.zeros((len(minibatch), self.state_size))
+        action, reward, done = [], [], []
+        next_state = np.zeros((len(minibatch), self.state_size))
+
+        # Store the samples in the arrays
+
+        for i in range(len(minibatch)):
+            state[i] = minibatch[i][0]
+            action.append(minibatch[i][1])
+            reward.append(minibatch[i][2])
+            next_state[i] = minibatch[i][3]
+            done.append(minibatch[i][4])
+
+        try:  # implement ddq and advantage
+            target = self.model.predict(state)
+            target_old = np.array(target)
+            # predict best action in ending state using the main network
+            target_next = self.model.predict(next_state)
+            # predict Q-values for ending state using the target network
+            # target_val = self.target_model.predict(next_state)
+        except NotFittedError:
+            target = np.zeros((len(minibatch),self.action_size))
+            target_next = np.zeros((len(minibatch),self.action_size))
+
+        for i in range(len(minibatch)):
+            # correction on the Q value for the action used
+            if done[i]:
+                target[i][action[i]] = reward[i]
+            else:
+                if self.ddqn:  # Double - DQN
+                    # current Q Network selects the action
+                    # a'_max = argmax_a' Q(s', a')
+                    a = np.argmax(target_next[i])
+                    # target Q Network evaluates the action
+                    # Q_max = Q_target(s', a'_max)
+                    target[i][action[i]] = reward[i] + self.gamma * (target_val[i][a])
+                else:  # Standard - DQN
+                    # DQN chooses the max Q value among next actions
+                    # selection and evaluation of action is on the target Q Network
+                    # Q_max = max_a' Q_target(s', a')
+                    target[i][action[i]] = reward[i] + self.gamma * (np.amax(target_next[i]))
+
+        self.model.fit(state, target)
 
 
 
@@ -280,30 +327,50 @@ class DQNAgent:
         return accuracy, efficiency
 
     def run(self, EPISODES):
-
         decay_step = 0
-        for e in range(EPISODES):
-            state, first = self.env.reset()
-            state = np.reshape(state, [1, self.state_size])
-            done = False
-            i = 0
-            tensorflow.keras.backend.clear_session()
-            while not done:
-                decay_step += 1
-                action, explore_probability = self.act(state, decay_step)
-                next_state, reward, done, _ = self.env.step(action)
-                if self.logging:
-                    with open(self.filename, 'a') as f:
-                        f.write(f" reward: {reward}\n")
-                next_state = np.reshape(next_state, [1, self.state_size])
 
-                self.remember(state, action, reward, next_state, done)
-                state = next_state
-                i += 1
-                if i >= self.max_episode_len:
-                    break
-                if i % 10 == 0:
-                    self.replay()
+        if self.Model_type == "Tree":
+            for e in range(EPISODES):
+                state, reward = self.env.reset()
+                state = np.reshape(state, [1, 1080])
+                for time in range(self.max_episode_len):
+                    decay_step += 1
+                    action, explore_probability = self.act(state, decay_step)
+                    next_state, reward, done, _ = self.env.step(action)
+                    if self.logging:
+                        with open(self.filename, 'a') as f:
+                            f.write(f" reward: {reward}\n")
+                    next_state = np.reshape(next_state, [1, 1080])
+                    self.remember(state, action, reward, next_state, done)
+                    state = next_state
+                    if done:
+                        break
+
+                self.tree_replay()
+        else:
+            decay_step = 0
+            for e in range(EPISODES):
+                state, first = self.env.reset()
+                state = np.reshape(state, [1, self.state_size])
+                done = False
+                i = 0
+                tensorflow.keras.backend.clear_session()
+                while not done:
+                    decay_step += 1
+                    action, explore_probability = self.act(state, decay_step)
+                    next_state, reward, done, _ = self.env.step(action)
+                    if self.logging:
+                        with open(self.filename, 'a') as f:
+                            f.write(f" reward: {reward}\n")
+                    next_state = np.reshape(next_state, [1, self.state_size])
+
+                    self.remember(state, action, reward, next_state, done)
+                    state = next_state
+                    i += 1
+                    if i >= self.max_episode_len:
+                        break
+                    if i % 10 == 0:
+                        self.replay()
     def save(self, name):
         self.model.save(name)
 

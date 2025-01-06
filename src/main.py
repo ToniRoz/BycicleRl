@@ -21,8 +21,14 @@ large = [300, 200, 100]
 verylarge = [512, 256, 64]
 
 env = WheelEnv()
-agent = DQNAgent(env, 12, 0.00025, 0.1, [512, 256, 64])
+agent = DQNAgent(env, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64],
+                 Model_type="NN", use_per=True, memory_size=1000, max_episode_len=100,
+                epsilon=0.1, epsilon_min=0.01,
+                 epsilon_decay=0.005, logging=True, filename="dump.txt")
 
+agent.run(30)
+
+"""
 def call_func_with_default_if_none(func, environment, params):
     params = {k: v for k, v in params.items() if v is not None}
     return func(environment, **params)
@@ -36,26 +42,24 @@ param_env = {
         'render': True,
         'filename': filename
     }
-"""
+
 param_agent = {
         'batch_size': 32,
         'learning_rate': 0.00025,
         'gamma': gamma,
         'layer_sizes': [512, 256, 100],
         'shift': False,
-        'Model_type': "Tree",
-        'use_per': False,
+        'Model_type': "NN",
+        'use_per': True,
         'memory_size': mem_size,
         'max_episode_len': 150,
-        'tree_max_depth': max_depth,
-        'tree_max_leafs': max_leafs,
         'epsilon': 1,
         'epsilon_min': 0.1,
         'epsilon_decay': 0.005,
         'logging': True,
         'filename': filename
     }
-"""
+
 env = WheelEnv(**param_env)
 
 
@@ -66,7 +70,7 @@ agent.run(11)
 
 
 
-"""
+
 sampler = optuna.samplers.TPESampler()
 optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
 study_name = "Tree-study"  # Unique identifier of the study.
