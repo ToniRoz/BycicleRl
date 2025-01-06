@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent
-from models.model import NNModel
+from models.models import NNModel
 import numpy as np
 import optuna
 import tensorflow 
@@ -20,11 +20,16 @@ medium = [200, 100]
 large = [300, 200, 100]
 verylarge = [512, 256, 64]
 
+# Define the logging directory
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # Path to the project folder
+LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs")
+os.makedirs(LOGGING_DIR, exist_ok=True)
+
 env = WheelEnv()
-agent = DQNAgent(env, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64],
+agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64],
                  Model_type="NN", use_per=True, memory_size=1000, max_episode_len=100,
-                epsilon=0.1, epsilon_min=0.01,
-                 epsilon_decay=0.005, logging=True, filename="dump.txt")
+                epsilon=0.9, epsilon_min=0.01,
+                 epsilon_decay=0.0005, logging=True)
 
 agent.run(30)
 

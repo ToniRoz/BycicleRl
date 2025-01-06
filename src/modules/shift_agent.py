@@ -11,7 +11,7 @@ import json
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.exceptions import NotFittedError
 from .memory import Memory
-from models.model import NNModel
+from models.models import NNModel
 
 
 

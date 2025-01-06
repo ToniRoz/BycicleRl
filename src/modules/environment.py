@@ -83,22 +83,33 @@ class WheelEnv(Env):
         self.reward_sums = []  # Initialize reward sum
         self.fig = plt.figure(figsize=(15, 10))  # Adjust height to fit two rows of subplots
 
+
+        # Add text elements at the top of the figure
+        # Agent parameters
+        self.batch_size = self.fig.text(0.1, 0.95, "None", fontsize=12)
+        self.gamma = self.fig.text(0.1, 0.92, "None", fontsize=12)
+        self.epsilon = self.fig.text(0.25, 0.95, "None", fontsize=12)
+        self.epsilon_min = self.fig.text(0.25, 0.92, "None", fontsize=12)
+        self.explore_probability = self.fig.text(0.4, 0.92, "None", fontsize=12)
+
+        # model parameters
+        self.model_type = self.fig.text(0.65, 0.95, "None", fontsize=12)
+        self.layer_sizes = self.fig.text(0.65, 0.92, "None", fontsize=12)
+        self.learning_rate = self.fig.text(0.8, 0.92, "None", fontsize=12)
+
         # First row: Original subplots
         self.ax1 = self.fig.add_subplot(231)  # First subplot in a 2x3 grid
         self.ax2 = self.fig.add_subplot(232, projection='3d')  # Second subplot in the first row
         self.ax3 = self.fig.add_subplot(233)  # Third subplot in the first row
-
-        # Second row: New subplots
         self.ax4 = self.fig.add_subplot(234)  # First subplot in the second row
-        self.ax5 = self.fig.add_subplot(235)  # Second subplot in the second row
+        #self.ax5 = self.fig.add_subplot(235)  # Second subplot in the second row
         self.ax6 = self.fig.add_subplot(236)  # Third subplot in the second row
 
         # Example: Set titles for each subplot (optional)
-        self.ax4.set_title('Session')
-        self.ax4.set_xlabel("Episode")
-        self.ax4.set_ylabel("cum. Reward")
-        self.ax5.set_title('New Plot 2')
-        self.ax6.set_title('New Plot 3')
+        self.ax6.set_title('Session')
+        self.ax6.set_xlabel("Episode")
+        self.ax6.set_ylabel("cum. Reward")
+        #self.ax5.set_title('New Plot 2')
 
         self.ax3.set_title("Reward per step")
         self.ax3.set_xlabel("step")
@@ -107,25 +118,18 @@ class WheelEnv(Env):
         if self.render:
             self.init_plot()
 
-    def update_text(self, epsilon, gamma, learning_rate, batch_size, explore_probability):
-        # Clear the subplot
-        self.ax6.clear()
-        self.ax6.axis('off')  # Turn off the axes
+    def update_text(self, epsilon, gamma, batch_size, explore_probability, epsilon_min,layers,model_type,learning_rate):
 
-        # Display each parameter as text
-        y_position = 0.9
-        self.ax6.text(0.1, y_position, f"epsilon: {epsilon}", fontsize=12, transform=self.ax5.transAxes)
-        y_position -= 0.1
-        self.ax6.text(0.1, y_position, f"gamma: {gamma}", fontsize=12, transform=self.ax5.transAxes)
-        y_position -= 0.1
-        self.ax6.text(0.1, y_position, f"learning rate: {learning_rate}", fontsize=12, transform=self.ax5.transAxes)
-        y_position -= 0.1
-        self.ax6.text(0.1, y_position, f"batch size: {batch_size}", fontsize=12, transform=self.ax5.transAxes)
-        y_position -= 0.1
-        self.ax6.text(0.1, y_position, f"random a. chance: {explore_probability}", fontsize=12, transform=self.ax5.transAxes)
-        y_position -= 0.1
-
-        self.ax6.set_title("Dynamic Parameters", fontsize=14)
+        # agent param
+        self.explore_probability.set_text(f"expl-prob.: {explore_probability:.2f}")
+        self.gamma.set_text(f"gamma: {gamma:.2f}")
+        self.epsilon.set_text(f"epsilon: {epsilon:.2f}")
+        self.epsilon_min.set_text(f"e_min: {epsilon_min:.2f}")
+        self.batch_size.set_text(f"batch.s: {batch_size:.2f}")
+        # model param
+        self.layer_sizes.set_text(f"lay: {layers[0]:d},{layers[1]:d},{layers[2]:d}")
+        self.model_type.set_text("Model type: "+model_type)
+        self.learning_rate.set_text(f"learning.r: {learning_rate:.2e}")
 
     def init_plot(self):
         self.bars = self.ax1.bar(range(self.n_spokes), self.tensionchanges)
@@ -163,17 +167,16 @@ class WheelEnv(Env):
     def update_reward_plot(self):
         self.ax3.clear()  # clear previous plot
         self.ax3.plot(self.rewards, label="Reward")  # plot the new reward data
-        self.ax4.set_title('Session')
-        self.ax4.set_xlabel("Episode")
-        self.ax4.set_ylabel("cum. Reward")
         self.ax3.legend()  # show the legend
         self.fig.canvas.draw()  # update the figure
         self.fig.canvas.flush_events()
         plt.pause(0.001)
 
     def update_episode_plot(self):
-        self.ax4.clear()
-        self.ax4.plot(self.reward_sums, label="Session")
+        self.ax6.clear()
+        self.ax6.plot(self.reward_sums, label="Session")
+        self.ax6.set_xlabel("Episode")
+        self.ax6.set_ylabel("cum. Reward")
         self.fig.canvas.draw()  # update the figure
         self.fig.canvas.flush_events()
         plt.pause(0.001)
