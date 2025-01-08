@@ -1,3 +1,4 @@
+import sklearn
 import numpy as np
 import random
 import tensorflow
@@ -8,7 +9,6 @@ from keras import backend as K
 from collections import deque
 import os
 import json
-from sklearn.exceptions import NotFittedError
 from .memory import Memory
 from models.models import NNModel
 from datetime import datetime
@@ -191,7 +191,7 @@ class DQNAgent:
         try:
             q_values = self.model.predict(state.reshape(1, -1))
             return np.argmax(q_values)
-        except NotFittedError:
+        except sklearn.exceptions.NotFittedError:
             random_action = random.randrange(self.action_size)
             return random_action
 
@@ -213,7 +213,7 @@ class DQNAgent:
                 q_values = self.model.predict(state.reshape(1, -1))
                 self.Predictions.append(q_values)
                 return np.argmax(q_values), explore_probability
-            except NotFittedError:
+            except sklearn.exceptions.NotFittedError:
                 self.Predictions.append(None)
                 random_action = random.randrange(self.action_size)
                 self.Actions.append(random_action)
@@ -250,7 +250,7 @@ class DQNAgent:
             target_next = self.model.predict(next_state)
             # predict Q-values for ending state using the target network
             # target_val = self.target_model.predict(next_state)
-        except NotFittedError:
+        except sklearn.exceptions.NotFittedError:
             target = reward
             target_next = 0
 
