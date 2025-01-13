@@ -298,13 +298,13 @@ class WheelEnv(Env):
         a = spoketension
 
         # Calculate stiffness matrix
-        K = self.mm.K_rim(tension=True) + self.mm.K_spk(smeared_spokes=False, tension=True)
+        #K = self.mm.K_rim(tension=True) + self.mm.K_spk(smeared_spokes=False, tension=True)
 
         # use adjustment vector and matrix to change spoke tension
-        F = self.mm.A_adj().dot(a)
+        F = self.F_matrix.dot(spoketension)
 
         # Solve for the mode coefficients
-        dm = np.linalg.solve(K, F)
+        dm = np.linalg.solve(self.K, F)
 
         # Get radial deflection
 
