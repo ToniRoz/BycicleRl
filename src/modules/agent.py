@@ -65,15 +65,6 @@ class DQNAgent:
             self.model = NNModel(input_shape=(self.state_size,), action_space=72, learning_rate=learning_rate,
                                  layer_sizes=layer_sizes)
 
-        params = locals()
-        del params['self']  # Remove 'self' entry from the dictionary
-
-        # Convert non-serializable types to strings
-        for key, value in params.items():
-            try:
-                json.dumps(value)
-            except TypeError:
-                params[key] = str(value)
 
         if self.logging:
             self.log_parameters(gamma=self.gamma, epsilon=self.epsilon, layers=self.layer_sizes,
