@@ -75,6 +75,8 @@ class WheelEnv(Env):
 
         # apply spokes tension
         self.wheel.apply_tension(init_tension)
+        self.K = self.mm.K_rim(tension=True) + self.mm.K_spk(smeared_spokes=False, tension=True)
+        self.F_matrix = self.mm.A_adj()
 
         self.tensionchanges = np.random.rand(self.n_spokes) * self.max_tension - (self.max_tension / 2)
         plt.style.use('dark_background')
