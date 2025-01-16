@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from simpledbf import Dbf5
 import os
 import optuna
@@ -8,6 +9,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import plotly.express as px
 import seaborn as sns
 import plotly.io as pio
+import optuna
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import warnings
 
@@ -97,10 +102,55 @@ pio.show(opt_slice)
 pio.show(opt_contour)
 pio.show(opt_intermediate)
 pio.show(opt_edf)
-# pio.show(opt_hypervol)
+##pio.show(opt_hypervol)
 #pio.show(opt_pa_co)
 #pio.show(opt_pareto)
 pio.show(opt_rank)
 pio.show(opt_time)
 #pio.show(opt_term)
 
+
+
+data = []
+for trial in study.trials:
+    if trial.state == optuna.trial.TrialState.COMPLETE:
+        trial_params = trial.params.copy()
+        trial_value = trial.value
+        # Convert layer_sizes to integer
+        if 'layer_sizes' in trial_params:
+            layer_sizes_key = tuple(trial_params['layer_sizes'])
+            trial_params['layer_sizes_int'] = layer_sizes_mapping.get(layer_sizes_key, 0)
+        # Add value and parameters to data
+        trial_params['value'] = trial_value
+        data.append(trial_params)
+
+# Convert data to DataFrame
+df = pd.DataFrame(data)
+
+# Prepare pairplot data
+pairplot_data = df.drop(columns='value')  # Drop 'value' to not plot it as a parameter
+pairplot_data['objective'] = df['value']
+
+# Create the pairplot
+sns.set(style="ticks")
+g = sns.pairplot(pairplot_data, hue='objective', palette="viridis", plot_kws={'alpha': 0.7})
+
+# Adjust axes for learning_rate to be logarithmic
+if 'learning_rate' in pairplot_data.columns:
+    for ax in g.axes.flatten():
+        if ax.get_xlabel() == 'learning_rate':
+            ax.set_xscale('log')
+        if ax.get_ylabel() == 'learning_rate':
+            ax.set_yscale('log')
+
+# Adjust layer_sizes_int axis ticks
+if 'layer_sizes_int' in pairplot_data.columns:
+    for ax in g.axes.flatten():
+        if ax.get_xlabel() == 'layer_sizes_int':
+            ax.set_xticks([1, 2, 3, 4, 5, 6, 7])
+        if ax.get_ylabel() == 'layer_sizes_int':
+            ax.set_yticks([1, 2, 3, 4, 5, 6, 7])
+
+# Set title
+plt.suptitle('Rank Plot (with layer_sizes_int)', y=1.02)
+plt.show()
