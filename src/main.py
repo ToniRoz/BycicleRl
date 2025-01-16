@@ -21,7 +21,7 @@ verylarge = [512, 256, 64]
 
 # Define the logging directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # Path to the project folder
-LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs")
+LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/testmodel")
 MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
 os.makedirs(LOGGING_DIR, exist_ok=True)
 
@@ -33,8 +33,7 @@ agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=32, learning_rate=0.000
 
 agent.run(5)
 agent.model.save(MODEL_DIR, "testmodel")
-agent.model.load(MODEL_DIR, "testmodel")
-agent.run(5)
+
 
 """
 def call_func_with_default_if_none(func, environment, params):
