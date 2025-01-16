@@ -221,18 +221,11 @@ class DQNAgent:
             minibatch = random.sample(self.memory, min(len(self.memory),
                                                        self.batch_size))  # Initialize the arrays for storing the samples
 
-        state = np.zeros((self.batch_size, self.state_size))
-        action, reward, done = [], [], []
-        next_state = np.zeros((self.batch_size, self.state_size))
-
-        # Store the samples in the arrays
-
-        for i in range(self.batch_size):# used to be min(self.batch_size,len(self.memory)) but it was causing an error with shorter episodes
-            state[i] = minibatch[i][0]
-            action.append(minibatch[i][1])
-            reward.append(minibatch[i][2])
-            next_state[i] = minibatch[i][3]
-            done.append(minibatch[i][4])
+        state, next_state = np.zeros((self.batch_size, self.state_size)), np.zeros((self.batch_size, self.state_size))
+        action, reward, done = np.zeros(self.batch_size, dtype=int), np.zeros(self.batch_size), np.zeros(self.batch_size,
+                                                                                              dtype=bool)
+        for i in range(self.batch_size):
+            state[i], action[i], reward[i], next_state[i], done[i] = minibatch[i]
 
         try:  # implement ddq and advantage
             target = self.model.predict(state)
