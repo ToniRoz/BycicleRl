@@ -10,7 +10,7 @@ from collections import deque
 import os
 import json
 from .memory import Memory
-from models.models import NNModel
+from models.models import NN_Model
 from datetime import datetime
 import csv
 
@@ -62,7 +62,7 @@ class DQNAgent:
         # self.Model_name = os.path.join(self.Save_Path, "_e_greedy.h5")
 
         if self.Model_type == "NN":
-            self.model = NNModel(input_shape=(self.state_size,), action_space=72, learning_rate=learning_rate,
+            self.model = NN_Model(input_shape=(self.state_size,), action_space=72, learning_rate=learning_rate,
                                  layer_sizes=layer_sizes)
 
 
@@ -257,7 +257,7 @@ class DQNAgent:
                     a = np.argmax(target_next[i])
                     # target Q Network evaluates the action
                     # Q_max = Q_target(s', a'_max)
-                    target[i][action[i]] = reward[i] + self.gamma * (target_val[i][a])
+                    #target[i][action[i]] = reward[i] + self.gamma * (target_val[i][a])
                 else:  # Standard - DQN
                     # DQN chooses the max Q value among next actions
                     # selection and evaluation of action is on the target Q Network
