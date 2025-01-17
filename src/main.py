@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent
 from models.models import NNModel
@@ -5,10 +8,8 @@ import numpy as np
 import optuna
 import tensorflow 
 from keras.models import load_model
-import sys
 import logging
 import plotly.io as pio
-import os
 
 
 
