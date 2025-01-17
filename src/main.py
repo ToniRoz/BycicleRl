@@ -1,16 +1,9 @@
 import sys
 import os
-import sklearn
-#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent
 #from models.models import NN_Model
-import numpy as np
-import optuna
-import tensorflow 
-from keras.models import load_model
-import logging
-import plotly.io as pio
 
 
 
@@ -23,18 +16,18 @@ verylarge = [512, 256, 64]
 
 # Define the logging directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # Path to the project folder
-LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/testmodel")
+LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/small_model")
 MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
 os.makedirs(LOGGING_DIR, exist_ok=True)
 
 env = WheelEnv()
-agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=32, learning_rate=0.00025, gamma=0, layer_sizes=[512, 256, 64],
-                 Model_type="NN", use_per=True, memory_size=1000, max_episode_len=100,
+agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=60, learning_rate=0.00025, gamma=0.7, layer_sizes=[100],
+                 Model_type="NN", use_per=True, memory_size=10000, max_episode_len=100,
                 epsilon=0.9, epsilon_min=0.01,
-                 epsilon_decay=0.0005, logging=True)
+                 epsilon_decay=0.0001, logging=True)
 
-agent.run(5)
-agent.model.save(MODEL_DIR, "testmodel")
+agent.run(100)
+agent.model.save(MODEL_DIR, "small_model")
 
 
 """

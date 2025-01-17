@@ -327,10 +327,13 @@ class WheelEnv(Env):
         #if (self.max_tension <= max(abs(spoketension))) and (max(abs(self.previous_tensionchanges)) < max(
         #        abs(spoketension))):  
         #    reward = reward - 5000
-        for spoke in spoketension:
 
-            if (self.max_tension <= abs(spoke)):
-                reward = reward - 5000
+
+        # commented out to test models from studies - reimplement later
+        #for spoke in spoketension:
+        #
+        #    if (self.max_tension <= abs(spoke)):
+        #        reward = reward - 5000
             
 
         next_state = tot_def.flatten()
