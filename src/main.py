@@ -1,6 +1,7 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import sklearn
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent
 #from models.models import NN_Model

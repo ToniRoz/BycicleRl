@@ -123,7 +123,7 @@ class WheelEnv(Env):
     def update_text(self, epsilon, gamma, batch_size, explore_probability, epsilon_min,layers,model_type,learning_rate):
 
         # agent param
-        self.explore_probability.set_text(f"expl-prob.: {explore_probability:.2f}")
+        self.explore_probability.set_text(f'expl-prob.: {explore_probability:.2f}')
         self.gamma.set_text(f"gamma: {gamma:.2f}")
         self.epsilon.set_text(f"epsilon: {epsilon:.2f}")
         self.epsilon_min.set_text(f"e_min: {epsilon_min:.2f}")
