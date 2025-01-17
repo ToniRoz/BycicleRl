@@ -1,5 +1,6 @@
 import sys
 import os
+import sklearn #for some reson that needs to be here otherwise code on the orin breaks 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent

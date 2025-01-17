@@ -1,0 +1,3 @@
+Learning Rate: 0.00025
+Gamma: 0.7
+Epsilon: 0.9

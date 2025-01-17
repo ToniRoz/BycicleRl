@@ -94,7 +94,7 @@ class DQNAgent:
             f.write(f"Learning Rate: {learning_rate}\n")
             f.write(f"Gamma: {gamma}\n")
             f.write(f"Epsilon: {epsilon}\n")
-            f.write(f"lay: {layers[0]:d},{layers[1]:d},{layers[2]:d}\n")
+            f.write(f"lay: {','.join(map(str, layers))}\n")
             f.write(f"Epsilon_min: {epsilon_min}\n")
             f.write(f"Epsilon_decay: {epsilon_decay}\n")
             f.write(f"Memory Size: {memory_size}\n")
