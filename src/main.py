@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent
-from models.models import NNModel
+#from models.models import NN_Model
 import numpy as np
 import optuna
 import tensorflow 
@@ -22,7 +22,8 @@ verylarge = [512, 256, 64]
 
 # Define the logging directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # Path to the project folder
-LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs")
+LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/testmodel")
+MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
 os.makedirs(LOGGING_DIR, exist_ok=True)
 
 env = WheelEnv()
@@ -31,7 +32,9 @@ agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=32, learning_rate=0.000
                 epsilon=0.9, epsilon_min=0.01,
                  epsilon_decay=0.0005, logging=True)
 
-agent.run(30)
+agent.run(5)
+agent.model.save(MODEL_DIR, "testmodel")
+
 
 """
 def call_func_with_default_if_none(func, environment, params):

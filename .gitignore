@@ -163,3 +163,5 @@ cython_debug/
 Sessionlogs
 # old files
 old
+dump.txt
+Models
