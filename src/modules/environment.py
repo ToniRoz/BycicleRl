@@ -129,7 +129,7 @@ class WheelEnv(Env):
         self.epsilon_min.set_text(f"e_min: {epsilon_min:.2f}")
         self.batch_size.set_text(f"batch.s: {batch_size:.2f}")
         # model param
-        self.layer_sizes.set_text(f"lay: {layers[0]:d},{layers[1]:d},{layers[2]:d}")
+        self.layer_sizes.set_text("lay: "+layers)
         self.model_type.set_text("Model type: "+model_type)
         self.learning_rate.set_text(f"learning.r: {learning_rate:.2e}")
 

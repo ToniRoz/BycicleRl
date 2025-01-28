@@ -5,7 +5,7 @@ import re
 import matplotlib.pyplot as plt
 
 # Load the CSV file
-file_path = 'SessionLogs\session10.csv'  # Replace with the path to your CSV file
+file_path = r"/home/fhg/Desktop/bycicle_new/BycicleRl/SessionLogs/small_model/session5.csv"  # Replace with the path to your CSV file
 data = pd.read_csv(file_path)
 print(data['predictions'].head())
 
