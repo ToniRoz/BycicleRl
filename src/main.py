@@ -18,7 +18,7 @@ verylarge = [512, 256, 64]
 # Define the logging directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # Path to the project folder
 
-"""
+
 LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/big_model")
 MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
 os.makedirs(LOGGING_DIR, exist_ok=True)
@@ -26,40 +26,13 @@ os.makedirs(LOGGING_DIR, exist_ok=True)
 env = WheelEnv()
 agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=140, learning_rate=0.0005, gamma=0.7, layer_sizes=[1000, 800, 512],
                  Model_type="NN", use_per=True, memory_size=30000, max_episode_len=100,
-                epsilon=0.9, epsilon_min=0.01,
+                epsilon=0.15, epsilon_min=0.01,
                  epsilon_decay=0.0001, logging=True)
+agent.model.load(MODEL_DIR, "big_model")
 
 agent.run(100)
-agent.model.save(MODEL_DIR, "big_model")
-"""
-LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/small_model")
-MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
-os.makedirs(LOGGING_DIR, exist_ok=True)
+agent.model.save(MODEL_DIR, "big_model2")
 
-
-env = WheelEnv(render=True)
-agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=60, learning_rate=0.00025, gamma=0.7, layer_sizes=[100],
-                 Model_type="NN", use_per=True, memory_size=10000, max_episode_len=100,
-                epsilon=0.9, epsilon_min=0.01,
-                 epsilon_decay=0.0001, logging=True)
-
-agent.run(100)
-agent.model.save(MODEL_DIR, "small_model")
-
-
-LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/medium_model")
-MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
-os.makedirs(LOGGING_DIR, exist_ok=True)
-
-
-env = WheelEnv(render=True)
-agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=60, learning_rate=0.00025, gamma=0.7, layer_sizes=[200, 100],
-                 Model_type="NN", use_per=True, memory_size=10000, max_episode_len=100,
-                epsilon=0.9, epsilon_min=0.01,
-                 epsilon_decay=0.0001, logging=True)
-
-agent.run(100)
-agent.model.save(MODEL_DIR, "medium_model")
 
 
 """
