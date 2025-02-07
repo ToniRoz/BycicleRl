@@ -26,12 +26,12 @@ os.makedirs(LOGGING_DIR, exist_ok=True)
 env = WheelEnv()
 agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=140, learning_rate=0.0005, gamma=0.7, layer_sizes=[1000, 800, 512],
                  Model_type="NN", use_per=True, memory_size=30000, max_episode_len=100,
-                epsilon=0.15, epsilon_min=0.01,
+                epsilon=0.3, epsilon_min=0.1,
                  epsilon_decay=0.0001, logging=True)
 agent.model.load(MODEL_DIR, "big_model")
 
 agent.run(100)
-agent.model.save(MODEL_DIR, "big_model2")
+agent.model.save(MODEL_DIR, "big_model_2")
 
 
 

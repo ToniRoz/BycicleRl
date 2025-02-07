@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 
 # Load the CSV file
 
-file_path = r"SessionLogs/big_model/session1.csv"  # Replace with the path to your CSV file
+file_path = r"SessionLogs/big_model/session3.csv"  # Replace with the path to your CSV file
 
 data = pd.read_csv(file_path)
 
@@ -265,17 +265,24 @@ plt.tight_layout()
 
 reward_differences = []
 
-for j in range(len(predictions)):
 
-    print(j)
 
-    for i, pred in enumerate(predictions[j]):
+
+
+for j in range(len(predictions)): # len of the entire session
+
+
+    for i, pred in enumerate(predictions[j]): # len of one episode (max 100 steps)
+        if len(predictions[j]) != 100:
+            print(len(predictions[j]))
+
 
         if pred is not None:
+            
 
-            actions_ = actions[i]
+            actions_ = actions[j]
 
-            rewards_ = rewards[i]
+            rewards_ = rewards[j]
 
             pred = pred[0]
 
@@ -312,3 +319,4 @@ plt.legend()
 plt.grid()
 
 plt.show()
+
