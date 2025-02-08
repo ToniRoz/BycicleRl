@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 
 # Load the CSV file
 
-file_path = r"SessionLogs/big_model/session3.csv"  # Replace with the path to your CSV file
+file_path = r"SessionLogs/big_model_new_reward/session1.csv"  # Replace with the path to your CSV file
 
 data = pd.read_csv(file_path)
 
