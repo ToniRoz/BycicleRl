@@ -192,7 +192,8 @@ class DQNAgent:
             -self.epsilon_decay * decay_step)
         #remove this from here and just change the display text variable
         # also layer sizes throws an error when the list is not as big as 3
-        self.env.update_text( self.epsilon, self.gamma, self.batch_size, explore_probability, self.epsilon_min, str(self.layer_sizes), self.Model_type, self.learning_rate)
+        if self.env.render:
+            self.env.update_text( self.epsilon, self.gamma, self.batch_size, explore_probability, self.epsilon_min, str(self.layer_sizes), self.Model_type, self.learning_rate)
 
         if explore_probability > np.random.rand():
             self.Predictions.append(None)

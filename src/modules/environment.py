@@ -12,8 +12,8 @@ from matplotlib import cm
 class WheelEnv(Env):
 
     def __init__(self, len_theta=360, n_spokes=36,
-                 render=True, logging=True,
-                 filename="dump.txt"):  # theta as 360 so that state lines up with spokes pos.
+                 render=False, logging=True,
+                 filename="dump.txt",scaling = 20):  # theta as 360 so that state lines up with spokes pos.
 
         self.len_theta = len_theta
         self.n_spokes = n_spokes
@@ -27,6 +27,8 @@ class WheelEnv(Env):
         self.filename = filename
 
         self.max_tension = 3
+
+        self.scaling = scaling
 
         self.theta = np.linspace(-np.pi, np.pi, 360)
 
@@ -79,44 +81,45 @@ class WheelEnv(Env):
         self.F_matrix = self.mm.A_adj()
 
         self.tensionchanges = np.random.rand(self.n_spokes) * self.max_tension - (self.max_tension / 2)
-        plt.style.use('dark_background')
-        self.norm = TwoSlopeNorm(vmin=-self.max_tension, vcenter=0, vmax=self.max_tension)
-        self.rewards = []  # Initialize empty list for rewards
-        self.reward_sums = []  # Initialize reward sum
-        self.fig = plt.figure(figsize=(15, 10))  # Adjust height to fit two rows of subplots
+        if self.render:
+            plt.style.use('dark_background')
+            self.norm = TwoSlopeNorm(vmin=-self.max_tension, vcenter=0, vmax=self.max_tension)
+            self.rewards = []  # Initialize empty list for rewards
+            self.reward_sums = []  # Initialize reward sum
+            self.fig = plt.figure(figsize=(15, 10))  # Adjust height to fit two rows of subplots
 
 
-        # Add text elements at the top of the figure
-        # Agent parameters
-        self.batch_size = self.fig.text(0.1, 0.95, "None", fontsize=12)
-        self.gamma = self.fig.text(0.1, 0.92, "None", fontsize=12)
-        self.epsilon = self.fig.text(0.25, 0.95, "None", fontsize=12)
-        self.epsilon_min = self.fig.text(0.25, 0.92, "None", fontsize=12)
-        self.explore_probability = self.fig.text(0.4, 0.92, "None", fontsize=12)
+            # Add text elements at the top of the figure
+            # Agent parameters
+            self.batch_size = self.fig.text(0.1, 0.95, "None", fontsize=12)
+            self.gamma = self.fig.text(0.1, 0.92, "None", fontsize=12)
+            self.epsilon = self.fig.text(0.25, 0.95, "None", fontsize=12)
+            self.epsilon_min = self.fig.text(0.25, 0.92, "None", fontsize=12)
+            self.explore_probability = self.fig.text(0.4, 0.92, "None", fontsize=12)
 
-        # model parameters
-        self.model_type = self.fig.text(0.65, 0.95, "None", fontsize=12)
-        self.layer_sizes = self.fig.text(0.65, 0.92, "None", fontsize=12)
-        self.learning_rate = self.fig.text(0.8, 0.92, "None", fontsize=12)
+            # model parameters
+            self.model_type = self.fig.text(0.65, 0.95, "None", fontsize=12)
+            self.layer_sizes = self.fig.text(0.65, 0.92, "None", fontsize=12)
+            self.learning_rate = self.fig.text(0.8, 0.92, "None", fontsize=12)
 
-        # First row: Original subplots
-        self.ax1 = self.fig.add_subplot(231)  # First subplot in a 2x3 grid
-        self.ax2 = self.fig.add_subplot(232, projection='3d')  # Second subplot in the first row
-        self.ax3 = self.fig.add_subplot(233)  # Third subplot in the first row
-        self.ax4 = self.fig.add_subplot(234)  # First subplot in the second row
-        #self.ax5 = self.fig.add_subplot(235)  # Second subplot in the second row
-        self.ax6 = self.fig.add_subplot(236)  # Third subplot in the second row
+            # First row: Original subplots
+            self.ax1 = self.fig.add_subplot(231)  # First subplot in a 2x3 grid
+            self.ax2 = self.fig.add_subplot(232, projection='3d')  # Second subplot in the first row
+            self.ax3 = self.fig.add_subplot(233)  # Third subplot in the first row
+            self.ax4 = self.fig.add_subplot(234)  # First subplot in the second row
+            #self.ax5 = self.fig.add_subplot(235)  # Second subplot in the second row
+            self.ax6 = self.fig.add_subplot(236)  # Third subplot in the second row
 
-        # Example: Set titles for each subplot (optional)
-        self.ax6.set_title('Session')
-        self.ax6.set_xlabel("Episode")
-        self.ax6.set_ylabel("cum. Reward")
-        #self.ax5.set_title('New Plot 2')
+            # Example: Set titles for each subplot (optional)
+            self.ax6.set_title('Session')
+            self.ax6.set_xlabel("Episode")
+            self.ax6.set_ylabel("cum. Reward")
+            #self.ax5.set_title('New Plot 2')
 
-        self.ax3.set_title("Reward per step")
-        self.ax3.set_xlabel("step")
-        self.ax3.set_ylabel("Reward")
-        self.spokes_lines = []
+            self.ax3.set_title("Reward per step")
+            self.ax3.set_xlabel("step")
+            self.ax3.set_ylabel("Reward")
+            self.spokes_lines = []
         if self.render:
             self.init_plot()
 
@@ -281,9 +284,10 @@ class WheelEnv(Env):
     def reset(self):
         self.tensionchanges = np.random.rand(self.n_spokes) * 2 - 1
         self.previous_tensionchanges = self.tensionchanges
-        self.reward_sums.append(np.sum(self.rewards))
-        self.update_episode_plot()
-        self.rewards = []
+        if self.render:
+            self.reward_sums.append(np.sum(self.rewards))
+            self.update_episode_plot()
+            self.rewards = []
         if self.logging:
             with open(self.filename, 'a') as f:
                 f.write(f" reset with tensionchanges: {self.tensionchanges}\n")
@@ -295,7 +299,7 @@ class WheelEnv(Env):
 
     def wheel_clac(self, spoketension):
 
-        a = spoketension
+        #a = spoketension
 
         # Calculate stiffness matrix
         #K = self.mm.K_rim(tension=True) + self.mm.K_spk(smeared_spokes=False, tension=True)
@@ -314,7 +318,7 @@ class WheelEnv(Env):
         tan_def = self.mm.rim_def_tan(self.theta, dm)
         tot_def = np.column_stack((rad_def, lat_def, tan_def))
 
-        reward = - np.sum(np.linalg.norm(tot_def, axis=1))
+        reward = - np.sum(np.linalg.norm(tot_def, axis=1)) - np.linalg.norm(spoketension)*self.scaling
 
 
         if reward >= self.best_reward:  # done if model finds naive best guess

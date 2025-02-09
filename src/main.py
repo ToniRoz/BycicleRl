@@ -5,7 +5,12 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.environment import WheelEnv
 from modules.agent import DQNAgent
 #from models.models import NN_Model
-
+"""
+big_model_new_reward_scaled : 5* spoke vector 
+big_model_new_reward_scaled_2 :10
+big_model_new_reward_scaled_3: 20 second session with epsilon 0.5
+big_model_new_reward_scaled_4: 40
+"""
 
 
 linear = [0]
@@ -19,21 +24,36 @@ verylarge = [512, 256, 64]
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # Path to the project folder
 
 
-LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/big_model_new_reward")
+LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/big_model_new_reward_scaled_3")
 MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
 os.makedirs(LOGGING_DIR, exist_ok=True)
 
-env = WheelEnv()
+env = WheelEnv(scaling = 20)
+agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=140, learning_rate=0.0005, gamma=0.9, layer_sizes=[1000, 800, 512],
+                 Model_type="NN", use_per=True, memory_size=30000, max_episode_len=100,
+                epsilon=0.5, epsilon_min=0.1,
+                 epsilon_decay=0.0002, logging=True)
+agent.model.load(MODEL_DIR, "big_model_new_reward_scaled_3")
+
+agent.run(150)
+agent.model.save(MODEL_DIR, "big_model_new_reward_scaled_3")
+
+###########################
+
+
+LOGGING_DIR = os.path.join(PROJECT_ROOT, "SessionLogs/big_model_new_reward_scaled_4")
+MODEL_DIR =  os.path.join(PROJECT_ROOT, "Models")
+os.makedirs(LOGGING_DIR, exist_ok=True)
+
+env = WheelEnv(scaling = 40)
 agent = DQNAgent(env,logging_dir=LOGGING_DIR, batch_size=140, learning_rate=0.0005, gamma=0.9, layer_sizes=[1000, 800, 512],
                  Model_type="NN", use_per=True, memory_size=30000, max_episode_len=100,
                 epsilon=0.9, epsilon_min=0.1,
                  epsilon_decay=0.0002, logging=True)
-#agent.model.load(MODEL_DIR, "big_model")
+#agent.model.load(MODEL_DIR, "big_model_new_reward_scaled_4")
 
-agent.run(100)
-agent.model.save(MODEL_DIR, "big_model_new_reward")
-
-
+agent.run(150)
+agent.model.save(MODEL_DIR, "big_model_new_reward_scaled_4")
 
 """
 def call_func_with_default_if_none(func, environment, params):
